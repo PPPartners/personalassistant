@@ -40,23 +40,23 @@
     "productName": "PersonalAssistant",
     "files": [
       "dist/**/*",
+      "!dist/*.{dmg,zip,exe,AppImage,deb,rpm,blockmap,yml}",
+      "!dist/mac-arm64",
+      "!dist/builder-debug.yml",
       "electron/**/*"
     ],
     "directories": {
-      "buildResources": "assets"
+      "buildResources": "assets",
+      "output": "dist"
     },
     "publish": {
       "provider": "github",
       "owner": "PPPartners",
-      "repo": "personalassistant",
-      "token": "${PERSONALASSISTANT_GH_TOKEN}"
+      "repo": "personalassistant"
     },
     "mac": {
       "category": "public.app-category.productivity",
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
+      "identity": null
     }
   },
   "repository": {
