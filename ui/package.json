@@ -1,6 +1,6 @@
 {
   "name": "personal-assistant-ui",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Visual interface for PersonalAssistant task manager",
   "main": "electron/main.js",
   "type": "module",
