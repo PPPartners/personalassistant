@@ -4,6 +4,11 @@ Use this checklist for every new release to ensure all files are properly create
 
 ## Pre-Release
 
+- [ ] **Code Signing Setup** (first time only - see CODE_SIGNING.md)
+  - [ ] Apple Developer account configured
+  - [ ] Developer ID certificate installed
+  - [ ] Environment variables set (APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID)
+
 - [ ] Update `version` in `ui/package.json` (e.g., `1.0.2`)
 - [ ] Commit and push version bump
   ```bash
