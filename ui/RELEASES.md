@@ -28,24 +28,53 @@ The PersonalAssistant app now includes an auto-update mechanism using `electron-
 
 ### Building and Publishing
 
-1. **Update version** in `package.json`:
-   ```json
-   {
-     "version": "1.0.1"
-   }
-   ```
+**IMPORTANT:** Follow these steps exactly to ensure `latest-mac.yml` is created properly.
 
-2. **Build and publish** the app:
-   ```bash
-   cd ui
-   npm run electron:build -- --publish always
-   ```
+#### Step 1: Update Version
+Edit `package.json`:
+```json
+{
+  "version": "1.0.2"
+}
+```
 
-   This will:
-   - Build the app
-   - Create a GitHub Release
-   - Upload the build artifacts
-   - Generate update files (latest.yml, latest-mac.yml, etc.)
+Commit the version bump:
+```bash
+git add package.json
+git commit -m "Bump version to 1.0.2"
+git push
+```
+
+#### Step 2: Build Locally
+```bash
+cd ui
+npm run release
+```
+
+This builds everything including `latest-mac.yml` without publishing.
+
+#### Step 3: Manually Upload to GitHub
+
+**Critical Files to Upload:**
+From `ui/dist/`:
+1. `PersonalAssistant-{version}-arm64.dmg` (installer)
+2. `PersonalAssistant-{version}-arm64-mac.zip` (zip version)
+3. `latest-mac.yml` ⚠️ **REQUIRED** for auto-updates
+
+**Upload Steps:**
+1. Go to https://github.com/PPPartners/personalassistant/releases/new
+2. Tag version: `v1.0.2`
+3. Release title: `1.0.2`
+4. Drag & drop all 3 files above
+5. Add release notes (optional)
+6. Click "Publish release"
+
+#### Alternative: Automatic Publishing (if token is configured)
+```bash
+npm run release:publish
+```
+
+⚠️ If this fails, use manual upload instead. It's more reliable.
 
 3. **Alternative: Draft Release**
    ```bash
