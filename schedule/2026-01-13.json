@@ -1,0 +1,27 @@
+{
+  "date": "2026-01-13",
+  "meetings": [
+    {
+      "id": "m-1768326283324",
+      "title": "Dinner & TV",
+      "startTime": "21:00",
+      "endTime": "22:30",
+      "notes": ""
+    }
+  ],
+  "scheduledTasks": [
+    {
+      "taskId": "daily-lower-20260113",
+      "taskTitle": "Lower body workout",
+      "startTime": "19:30",
+      "endTime": "21:00",
+      "duration": 90
+    },
+    {
+      "taskId": "daily-chess-20260113",
+      "taskTitle": "Chess lesson",
+      "startTime": "18:45",
+      "endTime": "19:15"
+    }
+  ]
+}

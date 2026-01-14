@@ -1,0 +1,11 @@
+{
+  "default_bucket": "today",
+  "deadline_soon_threshold_days": 3,
+  "auto_archive_done": true,
+  "ask_before_large_edits": true,
+  "max_tasks_today": 8,
+  "attachments_allowed_formats": [".png", ".jpg", ".jpeg", ".gif", ".pdf"],
+  "attachments_max_size_mb": 10,
+  "task_ids_in_use": [],
+  "current_focus": null
+}

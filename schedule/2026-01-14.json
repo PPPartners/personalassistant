@@ -1,0 +1,20 @@
+{
+  "date": "2026-01-14",
+  "meetings": [
+    {
+      "id": "m-1768373854372",
+      "title": "Q1 Presentation + Offsite Prep",
+      "startTime": "08:00",
+      "endTime": "08:30",
+      "notes": ""
+    },
+    {
+      "id": "m-1768373876034",
+      "title": "Tenielle <> Stefan (Messaging)",
+      "startTime": "09:00",
+      "endTime": "10:00",
+      "notes": ""
+    }
+  ],
+  "scheduledTasks": []
+}
