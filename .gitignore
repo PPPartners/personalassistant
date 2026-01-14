@@ -1,0 +1,12 @@
+# Data directories (now in ~/PersonalAssistant)
+archive/
+attachments/
+config/
+ideas/
+logs/
+schedule/
+tasks/
+CLAUDE.md
+
+# macOS
+.DS_Store
