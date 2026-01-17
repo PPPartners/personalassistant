@@ -3,7 +3,7 @@ import Card from './ui/Card';
 import Badge from './ui/Badge';
 import { getTaskUrgency, formatDeadline, getUrgencyColor, getUrgencyTextColor, getUrgencyLabel } from '../utils/dateUtils';
 
-function TaskCard({ task, columnId, onView, onMarkDone, onMarkDropped, onQuickPriorityChange, onMoveToBacklog, onStartPomodoro }) {
+function TaskCard({ task, columnId, onView, onMarkDone, onMarkDropped, onQuickPriorityChange, onMoveToBacklog, onStartPomodoro, onDelegateToAgent }) {
   const urgency = getTaskUrgency(task);
   const urgencyColor = getUrgencyColor(urgency);
   const urgencyTextColor = getUrgencyTextColor(urgency);
@@ -35,12 +35,10 @@ function TaskCard({ task, columnId, onView, onMarkDone, onMarkDropped, onQuickPr
     }
   };
 
-  const handleCancel = (e) => {
+  const handleDelegateToAgent = (e) => {
     e.stopPropagation();
-    if (confirm(`Cancel "${task.title}" and mark as dropped?`)) {
-      if (onMarkDropped) {
-        onMarkDropped(task, columnId);
-      }
+    if (onDelegateToAgent) {
+      onDelegateToAgent(task);
     }
   };
 
@@ -162,11 +160,11 @@ function TaskCard({ task, columnId, onView, onMarkDone, onMarkDropped, onQuickPr
               <span className="text-lg">✓</span>
             </button>
             <button
-              onClick={handleCancel}
-              className="aspect-square flex items-center justify-center text-text-secondary bg-dark-base/50 hover:bg-dark-base/70 border border-dark-border hover:border-text-tertiary/30 rounded-md transition-all hover:scale-105 active:scale-95 shadow-sm"
-              title="Cancel and mark as dropped"
+              onClick={handleDelegateToAgent}
+              className="aspect-square flex items-center justify-center text-primary-400 bg-primary-500/10 hover:bg-primary-500/20 border border-primary-500/30 hover:border-primary-400/50 rounded-md transition-all hover:scale-105 active:scale-95 shadow-sm"
+              title="Delegate to AI Agent"
             >
-              <span className="text-lg">✕</span>
+              <span className="text-lg">🤖</span>
             </button>
             <button
               onClick={handleMoveToBacklog}

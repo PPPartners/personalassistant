@@ -10,6 +10,7 @@ import EndDayModal from './components/EndDayModal';
 import QuickAddTaskModal from './components/QuickAddTaskModal';
 import IdeasView from './components/IdeasView';
 import ArchiveView from './components/ArchiveView';
+import CoWorkersView from './components/CoWorkersView';
 import PromoteIdeaModal from './components/PromoteIdeaModal';
 import RestoreTaskModal from './components/RestoreTaskModal';
 import Header from './components/Header';
@@ -20,6 +21,7 @@ import PomodoroSetupModal from './components/PomodoroSetupModal';
 import PomodoroFocusScreen from './components/PomodoroFocusScreen';
 import QuickPomodoroModal from './components/QuickPomodoroModal';
 import UpdateNotification from './components/UpdateNotification';
+import SettingsView from './components/SettingsView';
 
 function App() {
   const [tasks, setTasks] = useState({
@@ -55,6 +57,7 @@ function App() {
   const [schedule, setSchedule] = useState({ date: '', meetings: [], scheduledTasks: [] });
   const [showScheduleTaskModal, setShowScheduleTaskModal] = useState(false);
   const [taskToSchedule, setTaskToSchedule] = useState(null);
+  const [taskToDelegate, setTaskToDelegate] = useState(null);
   const [alertedMeetings, setAlertedMeetings] = useState(new Set());
   const [draggedItem, setDraggedItem] = useState(null);
   const [showPomodoroSetup, setShowPomodoroSetup] = useState(false);
@@ -256,6 +259,12 @@ function App() {
       console.error('Error marking task dropped:', error);
       alert('Failed to mark task as dropped: ' + error.message);
     }
+  };
+
+  const handleDelegateToAgent = (task) => {
+    setTaskToDelegate(task);
+    setCurrentView('coworkers');
+    console.log('Delegating task to agent:', task.title);
   };
 
   const handleMoveTask = async (task, fromColumn, toColumn) => {
@@ -634,6 +643,7 @@ function App() {
               onScheduleTask={handleScheduleTask}
               onToggleTodayStatus={handleToggleTodayStatus}
               onStartPomodoro={handleStartPomodoroFromCard}
+              onDelegateToAgent={handleDelegateToAgent}
             />
           )}
 
@@ -641,6 +651,7 @@ function App() {
             <AllTasksView
               tasks={tasks}
               onViewTask={handleViewTask}
+              onDelegateToAgent={handleDelegateToAgent}
             />
           )}
 
@@ -657,6 +668,14 @@ function App() {
             />
           )}
 
+          {currentView === 'coworkers' && (
+            <CoWorkersView
+              tasks={tasks}
+              preselectedTaskId={taskToDelegate?.id}
+              onClearPreselection={() => setTaskToDelegate(null)}
+            />
+          )}
+
           {currentView === 'archive' && (
             <ArchiveView
               archivedTasks={archivedTasks}
@@ -667,6 +686,10 @@ function App() {
               }}
               onDelete={handlePermanentlyDelete}
             />
+          )}
+
+          {currentView === 'settings' && (
+            <SettingsView />
           )}
         </div>
 

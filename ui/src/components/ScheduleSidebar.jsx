@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import MeetingBlock from './MeetingBlock';
 import AddMeetingModal from './AddMeetingModal';
 import ScheduledTaskBlock from './ScheduledTaskBlock';
@@ -12,6 +12,7 @@ function ScheduleSidebar({ schedule, onUpdateSchedule, draggedItem, setDraggedIt
   const [dropPreview, setDropPreview] = useState(null);
   const [resizingItem, setResizingItem] = useState(null);
   const [showUnscheduled, setShowUnscheduled] = useState(true);
+  const scrollContainerRef = useRef(null);
 
   // Update current time every minute
   useEffect(() => {
@@ -20,6 +21,27 @@ function ScheduleSidebar({ schedule, onUpdateSchedule, draggedItem, setDraggedIt
     }, 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // Auto-scroll to current time (1 hour before) when schedule loads or sidebar expands
+  useEffect(() => {
+    if (!scrollContainerRef.current || !isExpanded) return;
+
+    const hours = currentTime.getHours();
+
+    // Scroll to 1 hour before current time (e.g., if 11:30am, show 10:30am at top)
+    const targetHour = Math.max(0, hours - 1);
+    const scrollPosition = targetHour * HOUR_HEIGHT;
+
+    // Use setTimeout to ensure DOM is ready
+    setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTo({
+          top: scrollPosition,
+          behavior: 'auto' // Instant scroll, not animated
+        });
+      }
+    }, 100);
+  }, [schedule, isExpanded]);
 
   const START_HOUR = 0;  // 12 AM (midnight)
   const END_HOUR = 23;   // 11 PM (last hour is 23:00-24:00)
@@ -542,7 +564,7 @@ function ScheduleSidebar({ schedule, onUpdateSchedule, draggedItem, setDraggedIt
           )}
 
           {/* Timeline Grid */}
-          <div className="flex-1 overflow-y-auto px-3 py-2 relative">
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-3 py-2 relative">
             {schedule.meetings.length === 0 && (
               <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                 <div className="text-center py-8">

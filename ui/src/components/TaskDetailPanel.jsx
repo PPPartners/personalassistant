@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import EditableField from './EditableField';
 import DatePicker from './DatePicker';
 import NotesEditor from './NotesEditor';
+import AttachmentList from './AttachmentList';
+import FileUpload from './FileUpload';
 import { getTaskUrgency, getUrgencyColor, getUrgencyTextColor, getUrgencyLabel } from '../utils/dateUtils';
 
 function TaskDetailPanel({ task, column, onClose, onSave, onDelete, onMarkDone, onMove, onMarkDropped, onMoveToBacklog, onStartPomodoro }) {
@@ -120,6 +122,30 @@ function TaskDetailPanel({ task, column, onClose, onSave, onDelete, onMarkDone, 
             <NotesEditor
               notes={editedTask.notes}
               onChange={(notes) => handleFieldChange('notes', notes)}
+            />
+          </div>
+
+          {/* Attachments Section */}
+          <div className="bg-neutral-50 rounded-lg p-4">
+            <h3 className="text-sm font-bold text-neutral-700 mb-3">Attachments</h3>
+
+            {/* Attachment List */}
+            <div className="mb-4">
+              <AttachmentList
+                taskId={editedTask.id}
+                onAttachmentsChange={() => {
+                  // Trigger a re-render or refresh if needed
+                }}
+              />
+            </div>
+
+            {/* File Upload */}
+            <FileUpload
+              taskId={editedTask.id}
+              onUploadComplete={() => {
+                // Trigger a re-render or refresh
+                window.location.reload();
+              }}
             />
           </div>
 

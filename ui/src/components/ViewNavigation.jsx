@@ -5,7 +5,9 @@ function ViewNavigation({ currentView, onViewChange }) {
     { id: 'today', label: 'Today', icon: '📋' },
     { id: 'all-tasks', label: 'All Tasks', icon: '📊' },
     { id: 'ideas', label: 'Ideas', icon: '💡' },
-    { id: 'archive', label: 'Archive', icon: '📦' }
+    { id: 'coworkers', label: 'Co-Workers', icon: '🤖' },
+    { id: 'archive', label: 'Archive', icon: '📦' },
+    { id: 'settings', label: 'Settings', icon: '⚙️' }
   ];
 
   return (

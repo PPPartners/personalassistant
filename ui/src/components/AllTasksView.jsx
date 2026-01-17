@@ -2,7 +2,7 @@ import React from 'react';
 import CompactTaskCard from './CompactTaskCard';
 import Badge from './ui/Badge';
 
-function AllTasksView({ tasks, onViewTask }) {
+function AllTasksView({ tasks, onViewTask, onDelegateToAgent }) {
   return (
     <div className="h-full bg-dark-base p-4">
       <div className="h-full grid grid-cols-3 gap-4">

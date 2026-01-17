@@ -1,7 +1,7 @@
 import React from 'react';
 import TaskCard from './TaskCard';
 
-function TodayGrid({ tasks, maxTasks, onViewTask, onMarkDone, onMarkDropped, onQuickPriorityChange, onQuickAdd, onScheduleTask, onToggleTodayStatus, onStartPomodoro }) {
+function TodayGrid({ tasks, maxTasks, onViewTask, onMarkDone, onMarkDropped, onQuickPriorityChange, onQuickAdd, onScheduleTask, onToggleTodayStatus, onStartPomodoro, onDelegateToAgent }) {
   // Group tasks by priority
   const groupedTasks = {
     high: tasks.filter(t => t.priority === 'high'),
@@ -52,6 +52,7 @@ function TodayGrid({ tasks, maxTasks, onViewTask, onMarkDone, onMarkDropped, onQ
               onQuickPriorityChange={onQuickPriorityChange}
               onMoveToBacklog={onToggleTodayStatus}
               onStartPomodoro={onStartPomodoro}
+              onDelegateToAgent={onDelegateToAgent}
             />
           ))}
         </div>
