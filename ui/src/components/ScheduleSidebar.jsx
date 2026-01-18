@@ -3,7 +3,7 @@ import MeetingBlock from './MeetingBlock';
 import AddMeetingModal from './AddMeetingModal';
 import ScheduledTaskBlock from './ScheduledTaskBlock';
 
-function ScheduleSidebar({ schedule, onUpdateSchedule, draggedItem, setDraggedItem, todayTasks }) {
+function ScheduleSidebar({ schedule, onUpdateSchedule, draggedItem, setDraggedItem, todayTasks, timeFormat = '12h' }) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingMeeting, setEditingMeeting] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
@@ -12,6 +12,7 @@ function ScheduleSidebar({ schedule, onUpdateSchedule, draggedItem, setDraggedIt
   const [dropPreview, setDropPreview] = useState(null);
   const [resizingItem, setResizingItem] = useState(null);
   const [showUnscheduled, setShowUnscheduled] = useState(true);
+  const [hoverSlot, setHoverSlot] = useState(null); // { hour, isSecondHalf }
   const scrollContainerRef = useRef(null);
 
   // Update current time every minute
@@ -45,7 +46,7 @@ function ScheduleSidebar({ schedule, onUpdateSchedule, draggedItem, setDraggedIt
 
   const START_HOUR = 0;  // 12 AM (midnight)
   const END_HOUR = 23;   // 11 PM (last hour is 23:00-24:00)
-  const HOUR_HEIGHT = 60; // pixels per hour
+  const HOUR_HEIGHT = 80; // pixels per hour (increased from 60 for more space)
 
   const handleSaveMeeting = (meetingData) => {
     const updatedMeetings = editingMeeting
@@ -72,18 +73,29 @@ function ScheduleSidebar({ schedule, onUpdateSchedule, draggedItem, setDraggedIt
     }
   };
 
-  const handleHourClick = (hour) => {
-    const time = `${String(hour).padStart(2, '0')}:00`;
+  const handleHourClick = (e, hour) => {
+    // Calculate which 30-minute slot was clicked
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickY = e.clientY - rect.top;
+    const isSecondHalf = clickY > (HOUR_HEIGHT / 2);
+
+    const minutes = isSecondHalf ? '30' : '00';
+    const time = `${String(hour).padStart(2, '0')}:${minutes}`;
+
     setSelectedTime(time);
     setEditingMeeting(null);
     setShowAddModal(true);
   };
 
   const formatHour = (hour) => {
-    if (hour === 0) return '12a';
-    if (hour === 12) return '12p';
-    if (hour < 12) return `${hour}a`;
-    return `${hour - 12}p`;
+    if (timeFormat === '24h') {
+      return String(hour);
+    }
+    // 12-hour format
+    if (hour === 0) return '12am';
+    if (hour === 12) return '12pm';
+    if (hour < 12) return `${hour}am`;
+    return `${hour - 12}pm`;
   };
 
   const getMeetingsForHour = (hour) => {
@@ -457,6 +469,99 @@ function ScheduleSidebar({ schedule, onUpdateSchedule, draggedItem, setDraggedIt
     return todayTasks.filter(task => !scheduledTaskIds.has(task.id));
   };
 
+  /**
+   * Check if two time ranges overlap
+   */
+  const doItemsOverlap = (item1, item2) => {
+    const getMinutes = (timeStr) => {
+      const [hours, mins] = timeStr.split(':').map(Number);
+      return hours * 60 + mins;
+    };
+
+    const start1 = getMinutes(item1.startTime);
+    const end1 = getMinutes(item1.endTime);
+    const start2 = getMinutes(item2.startTime);
+    const end2 = getMinutes(item2.endTime);
+
+    // Two intervals overlap if start1 < end2 AND start2 < end1
+    return start1 < end2 && start2 < end1;
+  };
+
+  /**
+   * Calculate column layout for overlapping items using overlap detection
+   * Returns an object mapping item IDs to { column, totalColumns }
+   */
+  const calculateItemColumns = (items) => {
+    if (items.length === 0) return {};
+    if (items.length === 1) {
+      const itemId = items[0].id || items[0].taskId;
+      return { [itemId]: { column: 0, totalColumns: 1 } };
+    }
+
+    const getMinutes = (timeStr) => {
+      const [hours, mins] = timeStr.split(':').map(Number);
+      return hours * 60 + mins;
+    };
+
+    // Sort items by start time
+    const sortedItems = [...items].sort((a, b) => {
+      const aStart = getMinutes(a.startTime);
+      const bStart = getMinutes(b.startTime);
+      return aStart - bStart;
+    });
+
+    // Build overlap groups - find which items actually overlap with each other
+    const layout = {};
+    const columnEndTimes = []; // Track when each column becomes free
+
+    sortedItems.forEach(item => {
+      const itemId = item.id || item.taskId;
+      const startMinutes = getMinutes(item.startTime);
+      const endMinutes = getMinutes(item.endTime);
+
+      // Find the first column where this item doesn't overlap with the current occupant
+      let column = 0;
+      while (column < columnEndTimes.length) {
+        if (columnEndTimes[column] <= startMinutes) {
+          // This column is free at our start time
+          break;
+        }
+        column++;
+      }
+
+      // Assign this item to the column
+      layout[itemId] = { column };
+
+      // Update the column's end time
+      if (column < columnEndTimes.length) {
+        columnEndTimes[column] = endMinutes;
+      } else {
+        columnEndTimes.push(endMinutes);
+      }
+    });
+
+    // Calculate total columns needed (for width calculation)
+    // For each item, find max columns needed during its time range
+    sortedItems.forEach(item => {
+      const itemId = item.id || item.taskId;
+      const startMinutes = getMinutes(item.startTime);
+      const endMinutes = getMinutes(item.endTime);
+
+      // Count how many items overlap with this one
+      let maxOverlapping = 1;
+      sortedItems.forEach(otherItem => {
+        if (item === otherItem) return;
+        if (doItemsOverlap(item, otherItem)) {
+          maxOverlapping = Math.max(maxOverlapping, (layout[otherItem.id || otherItem.taskId].column || 0) + 1);
+        }
+      });
+
+      layout[itemId].totalColumns = Math.max(maxOverlapping, layout[itemId].column + 1);
+    });
+
+    return layout;
+  };
+
   const unscheduledTasks = getUnscheduledTasks();
 
   const hours = [];
@@ -464,46 +569,82 @@ function ScheduleSidebar({ schedule, onUpdateSchedule, draggedItem, setDraggedIt
     hours.push(i);
   }
 
+  // Calculate column layout for ALL items in the schedule (not per-hour)
+  // This ensures items spanning multiple hours are handled correctly
+  const allScheduleItems = [...(schedule.meetings || []), ...(schedule.scheduledTasks || [])];
+  const globalItemLayout = calculateItemColumns(allScheduleItems);
+
   const currentTimePosition = getCurrentTimePosition();
 
   return (
-    <div className="w-80 bg-dark-surface border-l border-dark-border flex flex-col h-full shadow-glass-sm">
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-dark-border bg-dark-elevated">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+    <div className={`${isExpanded ? 'w-96' : 'w-16'} bg-dark-surface border-l border-dark-border flex flex-col h-full shadow-glass-sm transition-all duration-300 ease-in-out`}>
+      {/* Header - Collapsed State */}
+      {!isExpanded && (
+        <div className="flex flex-col items-center h-full">
+          <div className="py-3 border-b border-dark-border">
             <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="text-text-secondary hover:text-text-primary"
+              onClick={() => setIsExpanded(true)}
+              className="p-2 text-text-secondary hover:text-text-primary hover:bg-dark-hover rounded transition-colors"
+              title="Expand schedule"
             >
               <svg
-                className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                className="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <h3 className="font-semibold text-text-primary">Today's Schedule</h3>
           </div>
-          <button
-            onClick={() => {
-              setEditingMeeting(null);
-              setShowAddModal(true);
-            }}
-            className="p-1.5 text-primary-400 hover:text-primary-300 hover:bg-dark-hover rounded transition-colors"
-            title="Add meeting"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
+          {/* Vertical text indicator */}
+          <div className="flex-1 flex items-center justify-center py-4">
+            <div className="transform -rotate-90 whitespace-nowrap text-xs font-medium text-text-tertiary">
+              Schedule
+            </div>
+          </div>
         </div>
-        <div className="text-xs text-text-tertiary mt-1">
-          {schedule.meetings.length} meeting{schedule.meetings.length !== 1 ? 's' : ''} • {(schedule.scheduledTasks || []).length} task{(schedule.scheduledTasks || []).length !== 1 ? 's' : ''} • {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+      )}
+
+      {/* Header - Expanded State */}
+      {isExpanded && (
+        <div className="px-4 py-3 border-b border-dark-border bg-dark-elevated">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsExpanded(false)}
+                className="text-text-secondary hover:text-text-primary transition-colors"
+                title="Collapse schedule"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              <h3 className="font-semibold text-text-primary">Today's Schedule</h3>
+            </div>
+            <button
+              onClick={() => {
+                setEditingMeeting(null);
+                setShowAddModal(true);
+              }}
+              className="p-1.5 text-primary-400 hover:text-primary-300 hover:bg-dark-hover rounded transition-colors"
+              title="Add meeting"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          </div>
+          <div className="text-xs text-text-tertiary mt-1">
+            {schedule.meetings.length} meeting{schedule.meetings.length !== 1 ? 's' : ''} • {(schedule.scheduledTasks || []).length} task{(schedule.scheduledTasks || []).length !== 1 ? 's' : ''} • {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+          </div>
         </div>
-      </div>
+      )}
 
       {isExpanded && (
         <>
@@ -585,18 +726,28 @@ function ScheduleSidebar({ schedule, onUpdateSchedule, draggedItem, setDraggedIt
                 const isLastHour = hour === END_HOUR;
                 const hasItems = hourMeetings.length > 0 || hourScheduledTasks.length > 0;
 
+                // Use the global item layout (calculated for entire day)
+                const itemLayout = globalItemLayout;
+
                 return (
                   <div key={hour} className="relative" style={{ height: `${HOUR_HEIGHT}px` }}>
                     {/* Hour label */}
-                    <div className="absolute left-0 -top-2 w-10 text-xs font-medium text-text-secondary">
+                    <div className="absolute left-0 -top-2 w-12 text-xs font-medium text-text-secondary">
                       {formatHour(hour)}
                     </div>
 
                     {/* Clickable hour slot */}
                     <div
-                      className="ml-12 border-t border-dark-border hover:bg-primary-500/10 transition-colors cursor-pointer relative"
+                      className="ml-14 border-t border-dark-border cursor-pointer relative"
                       style={{ height: `${HOUR_HEIGHT}px` }}
-                      onClick={() => handleHourClick(hour)}
+                      onClick={(e) => handleHourClick(e, hour)}
+                      onMouseMove={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const mouseY = e.clientY - rect.top;
+                        const isSecondHalf = mouseY > (HOUR_HEIGHT / 2);
+                        setHoverSlot({ hour, isSecondHalf });
+                      }}
+                      onMouseLeave={() => setHoverSlot(null)}
                       onDragOver={(e) => {
                         if (resizingItem) {
                           handleResizeDragOver(e, hour);
@@ -620,6 +771,17 @@ function ScheduleSidebar({ schedule, onUpdateSchedule, draggedItem, setDraggedIt
                         />
                       )}
 
+                      {/* 30-minute hover highlight */}
+                      {hoverSlot && hoverSlot.hour === hour && (
+                        <div
+                          className="absolute left-0 right-0 bg-primary-500/10 pointer-events-none transition-all"
+                          style={{
+                            top: hoverSlot.isSecondHalf ? `${HOUR_HEIGHT / 2}px` : '0px',
+                            height: `${HOUR_HEIGHT / 2}px`
+                          }}
+                        />
+                      )}
+
                       {/* Drop Preview Indicator */}
                       {dropPreview && dropPreview.hour === hour && (
                         <div
@@ -637,11 +799,23 @@ function ScheduleSidebar({ schedule, onUpdateSchedule, draggedItem, setDraggedIt
                           {hourMeetings.map(meeting => {
                             const height = calculateItemHeight(meeting.startTime, meeting.endTime);
                             const top = calculateItemTop(meeting.startTime, hour);
+                            const layout = itemLayout[meeting.id] || { column: 0, totalColumns: 1 };
+
+                            // Calculate horizontal position based on column
+                            const columnWidth = 100 / layout.totalColumns; // percentage
+                            const leftPercent = layout.column * columnWidth;
+                            const widthPercent = columnWidth;
+
                             return (
                               <div
                                 key={meeting.id}
-                                className="absolute left-1 right-1"
-                                style={{ top: `${top}px`, height: `${height}px` }}
+                                className="absolute"
+                                style={{
+                                  top: `${top}px`,
+                                  height: `${height}px`,
+                                  left: `${leftPercent}%`,
+                                  width: `calc(${widthPercent}% - 8px)` // Gap between columns
+                                }}
                               >
                                 <MeetingBlock
                                   meeting={meeting}
@@ -649,6 +823,8 @@ function ScheduleSidebar({ schedule, onUpdateSchedule, draggedItem, setDraggedIt
                                   onDelete={handleDeleteMeeting}
                                   onDragStart={handleDragStart}
                                   onResizeStart={handleResizeStart}
+                                  isOverlapping={layout.totalColumns > 1}
+                                  timeFormat={timeFormat}
                                 />
                               </div>
                             );
@@ -656,17 +832,31 @@ function ScheduleSidebar({ schedule, onUpdateSchedule, draggedItem, setDraggedIt
                           {hourScheduledTasks.map(task => {
                             const height = calculateItemHeight(task.startTime, task.endTime);
                             const top = calculateItemTop(task.startTime, hour);
+                            const layout = itemLayout[task.taskId] || { column: 0, totalColumns: 1 };
+
+                            // Calculate horizontal position based on column
+                            const columnWidth = 100 / layout.totalColumns; // percentage
+                            const leftPercent = layout.column * columnWidth;
+                            const widthPercent = columnWidth;
+
                             return (
                               <div
                                 key={task.taskId}
-                                className="absolute left-1 right-1"
-                                style={{ top: `${top}px`, height: `${height}px` }}
+                                className="absolute"
+                                style={{
+                                  top: `${top}px`,
+                                  height: `${height}px`,
+                                  left: `${leftPercent}%`,
+                                  width: `calc(${widthPercent}% - 8px)` // Gap between columns
+                                }}
                               >
                                 <ScheduledTaskBlock
                                   scheduledTask={task}
                                   onRemove={handleRemoveScheduledTask}
                                   onDragStart={handleDragStart}
                                   onResizeStart={handleResizeStart}
+                                  isOverlapping={layout.totalColumns > 1}
+                                  timeFormat={timeFormat}
                                 />
                               </div>
                             );
@@ -681,7 +871,7 @@ function ScheduleSidebar({ schedule, onUpdateSchedule, draggedItem, setDraggedIt
               {/* Current time indicator */}
               {currentTimePosition !== null && (
                 <div
-                  className="absolute left-12 right-0 z-20 pointer-events-none"
+                  className="absolute left-14 right-0 z-20 pointer-events-none"
                   style={{ top: `${currentTimePosition}px` }}
                 >
                   <div className="flex items-center">
@@ -714,6 +904,7 @@ function ScheduleSidebar({ schedule, onUpdateSchedule, draggedItem, setDraggedIt
         }}
         onSave={handleSaveMeeting}
         meeting={editingMeeting}
+        initialTime={selectedTime}
       />
     </div>
   );

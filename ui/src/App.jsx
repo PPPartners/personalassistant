@@ -64,6 +64,7 @@ function App() {
   const [showQuickPomodoroModal, setShowQuickPomodoroModal] = useState(false);
   const [quickPomodoroTask, setQuickPomodoroTask] = useState(null);
   const [pomodoro, setPomodoro] = useState(null);
+  const [timeFormat, setTimeFormat] = useState('12h'); // '12h' or '24h'
 
   // Load all tasks on mount
   useEffect(() => {
@@ -142,6 +143,11 @@ function App() {
 
         setSettings(settingsData);
         setRecurringMarkdown(recurring);
+
+        // Load time format from settings
+        if (settingsData && settingsData.time_format) {
+          setTimeFormat(settingsData.time_format);
+        }
       } else {
         console.error('Failed to load tasks:', result.error);
       }
@@ -709,6 +715,7 @@ function App() {
           draggedItem={draggedItem}
           setDraggedItem={setDraggedItem}
           todayTasks={tasks.today}
+          timeFormat={timeFormat}
         />
       </main>
 

@@ -8,6 +8,7 @@ function SettingsView() {
   const [showKey, setShowKey] = useState(false);
   const [toolPermissions, setToolPermissions] = useState({});
   const [originalToolPermissions, setOriginalToolPermissions] = useState({});
+  const [timeFormat, setTimeFormat] = useState('12h'); // '12h' or '24h'
 
   useEffect(() => {
     loadSettings();
@@ -47,11 +48,13 @@ function SettingsView() {
         const settings = JSON.parse(result.content);
         const apiKey = settings.anthropic_api_key || '';
         const permissions = settings.tool_permissions || getDefaultToolPermissions();
+        const format = settings.time_format || '12h';
 
         setOriginalApiKey(apiKey);
         setAnthropicApiKey(apiKey);
         setOriginalToolPermissions(permissions);
         setToolPermissions(permissions);
+        setTimeFormat(format);
       }
       setLoading(false);
     } catch (error) {
@@ -80,6 +83,24 @@ function SettingsView() {
       console.log('Tool permissions auto-saved');
     } catch (error) {
       console.error('Failed to auto-save tool permissions:', error);
+    }
+  };
+
+  const handleTimeFormatChange = async (format) => {
+    setTimeFormat(format);
+
+    // Auto-save time format
+    try {
+      const readResult = await window.electronAPI.readFile('config/settings.json');
+      let settings = {};
+      if (readResult.success) {
+        settings = JSON.parse(readResult.content);
+      }
+      settings.time_format = format;
+      await window.electronAPI.writeFile('config/settings.json', JSON.stringify(settings, null, 2));
+      console.log('Time format auto-saved:', format);
+    } catch (error) {
+      console.error('Failed to auto-save time format:', error);
     }
   };
 
@@ -354,6 +375,32 @@ function SettingsView() {
                     ))}
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Display Preferences Section */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold text-text-primary mb-4">Display Preferences</h3>
+
+            <div className="glass border border-dark-border rounded-lg p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1">
+                    Time Format
+                  </label>
+                  <p className="text-xs text-text-tertiary">
+                    Choose how times are displayed in the schedule
+                  </p>
+                </div>
+                <select
+                  value={timeFormat}
+                  onChange={(e) => handleTimeFormatChange(e.target.value)}
+                  className="bg-dark-base border border-dark-border rounded px-3 py-2 text-sm text-text-primary min-w-[180px]"
+                >
+                  <option value="12h">12-hour (5am, 7pm)</option>
+                  <option value="24h">24-hour (5, 19)</option>
+                </select>
               </div>
             </div>
           </div>

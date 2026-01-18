@@ -1,9 +1,15 @@
 import React from 'react';
 
-function MeetingBlock({ meeting, onEdit, onDelete, onDragStart, onResizeStart }) {
+function MeetingBlock({ meeting, onEdit, onDelete, onDragStart, onResizeStart, isOverlapping = false, timeFormat = '12h' }) {
   const formatTime = (time) => {
     const [hours, minutes] = time.split(':');
     const hour = parseInt(hours);
+
+    if (timeFormat === '24h') {
+      return `${String(hour).padStart(2, '0')}:${minutes}`;
+    }
+
+    // 12-hour format
     const period = hour >= 12 ? 'PM' : 'AM';
     const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
     return `${displayHour}:${minutes} ${period}`;
@@ -37,7 +43,7 @@ function MeetingBlock({ meeting, onEdit, onDelete, onDragStart, onResizeStart })
 
   return (
     <div
-      className={`group bg-blue-100 border-l-4 border-blue-500 rounded p-2 hover:shadow-md transition-shadow h-full flex cursor-move relative ${isShortMeeting ? 'items-center' : 'flex-col items-start'}`}
+      className={`group bg-blue-100 rounded p-2 hover:shadow-md transition-shadow h-full flex cursor-move relative border-2 border-blue-400 border-l-4 border-l-blue-500 ${isShortMeeting ? 'items-center' : 'flex-col items-start'}`}
       draggable
       onDragStart={(e) => {
         e.stopPropagation();
@@ -59,24 +65,26 @@ function MeetingBlock({ meeting, onEdit, onDelete, onDragStart, onResizeStart })
         }}
       />
 
-      <div className={`flex justify-between gap-2 w-full ${isShortMeeting ? 'items-center' : 'items-start'}`}>
-        <div className={`flex-1 min-w-0 flex ${isShortMeeting ? 'items-center' : 'items-start'}`}>
+      <div className={`flex justify-between gap-2 w-full ${isShortMeeting ? 'items-start' : 'items-start'}`}>
+        <div className={`flex-1 min-w-0 flex ${isShortMeeting ? 'items-start' : 'items-start'}`}>
           {isShortMeeting ? (
-            // Short meetings: only show title, smaller text for very short meetings
-            <h4 className={`font-medium text-blue-900 truncate ${getDurationMinutes() <= 20 ? 'text-xs' : 'text-sm'}`}>
+            // Short meetings: if overlapping, use truncate; otherwise wrap
+            <h4 className={`font-medium text-blue-900 ${isOverlapping ? 'truncate' : 'break-words'} ${getDurationMinutes() <= 20 ? 'text-xs' : 'text-sm'}`}>
               {meeting.title}
             </h4>
           ) : (
-            // Long meetings: show title first, then time and notes
+            // Long meetings: show title with wrapping, then time and notes
             <div className="w-full">
-              <div className="font-medium text-sm text-blue-900 truncate">
+              <div className="font-medium text-sm text-blue-900 break-words">
                 {meeting.title}
               </div>
-              <div className="text-xs text-blue-700 mt-0.5">
-                {formatTime(meeting.startTime)} - {formatTime(meeting.endTime)}
-                <span className="ml-2 text-blue-600">({calculateDuration()})</span>
-              </div>
-              {meeting.notes && (
+              {!isOverlapping && (
+                <div className="text-xs text-blue-700 mt-0.5 break-words">
+                  {formatTime(meeting.startTime)} - {formatTime(meeting.endTime)}
+                  <span className="ml-2 text-blue-600">({calculateDuration()})</span>
+                </div>
+              )}
+              {meeting.notes && !isOverlapping && (
                 <div className="text-xs text-blue-600 mt-1 line-clamp-2">
                   {meeting.notes}
                 </div>

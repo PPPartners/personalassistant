@@ -48,6 +48,56 @@ function loadAnthropicApiKey() {
   return null;
 }
 
+/**
+ * Create schedule files for entire year 2026
+ * This ensures schedule files exist for every day, preventing the "no schedule" issue
+ */
+async function createScheduleFilesFor2026() {
+  try {
+    const scheduleDir = path.join(PA_ROOT, 'schedule');
+
+    // Ensure schedule directory exists
+    if (!fsSync.existsSync(scheduleDir)) {
+      await fs.mkdir(scheduleDir, { recursive: true });
+    }
+
+    console.log('Creating schedule files for 2026...');
+
+    // Create files for all 365 days of 2026
+    const year = 2026;
+    let filesCreated = 0;
+    let filesSkipped = 0;
+
+    for (let month = 1; month <= 12; month++) {
+      // Get number of days in this month
+      const daysInMonth = new Date(year, month, 0).getDate();
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const filePath = path.join(scheduleDir, `${dateStr}.json`);
+
+        // Only create if file doesn't exist (don't overwrite existing schedules)
+        if (!fsSync.existsSync(filePath)) {
+          const emptySchedule = {
+            date: dateStr,
+            meetings: [],
+            scheduledTasks: []
+          };
+
+          await fs.writeFile(filePath, JSON.stringify(emptySchedule, null, 2), 'utf-8');
+          filesCreated++;
+        } else {
+          filesSkipped++;
+        }
+      }
+    }
+
+    console.log(`Schedule files ready: ${filesCreated} created, ${filesSkipped} already existed`);
+  } catch (error) {
+    console.error('Failed to create schedule files:', error);
+  }
+}
+
 // Create main window
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -82,7 +132,10 @@ function createWindow() {
 }
 
 // App lifecycle
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Create schedule files for 2026 before opening window
+  await createScheduleFilesFor2026();
+
   createWindow();
 
   app.on('activate', () => {
@@ -308,10 +361,29 @@ ipcMain.handle('start-terminal', () => {
   const shell = process.env.SHELL || '/bin/zsh';
   console.log('Starting terminal with shell:', shell, 'in directory:', PA_ROOT);
 
+  // Build proper environment with full PATH
+  // In production Electron apps, process.env.PATH is limited, so we need to include common binary paths
+  const env = {
+    ...process.env,
+    PATH: [
+      '/usr/local/bin',
+      '/usr/bin',
+      '/bin',
+      '/usr/sbin',
+      '/sbin',
+      '/opt/homebrew/bin', // Homebrew on Apple Silicon
+      '/opt/homebrew/sbin',
+      path.join(os.homedir(), '.local/bin'), // User local bins
+      path.join(os.homedir(), '.npm/bin'),
+      path.join(os.homedir(), '.cargo/bin'),
+      process.env.PATH || ''
+    ].filter(Boolean).join(':')
+  };
+
   ptyProcess = pty.spawn(shell, [], {
     name: 'xterm-256color',
     cwd: PA_ROOT,
-    env: process.env,
+    env: env,
   });
 
   ptyProcess.onData((data) => {

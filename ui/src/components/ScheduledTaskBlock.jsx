@@ -1,9 +1,15 @@
 import React from 'react';
 
-function ScheduledTaskBlock({ scheduledTask, onRemove, onDragStart, onResizeStart }) {
+function ScheduledTaskBlock({ scheduledTask, onRemove, onDragStart, onResizeStart, isOverlapping = false, timeFormat = '12h' }) {
   const formatTime = (time) => {
     const [hours, minutes] = time.split(':');
     const hour = parseInt(hours);
+
+    if (timeFormat === '24h') {
+      return `${String(hour).padStart(2, '0')}:${minutes}`;
+    }
+
+    // 12-hour format
     const period = hour >= 12 ? 'PM' : 'AM';
     const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
     return `${displayHour}:${minutes} ${period}`;
@@ -36,7 +42,7 @@ function ScheduledTaskBlock({ scheduledTask, onRemove, onDragStart, onResizeStar
 
   return (
     <div
-      className={`bg-green-50 border-l-4 border-green-500 p-2 rounded hover:shadow-sm transition-shadow group h-full flex cursor-move relative ${isShortTask ? 'items-center' : 'items-start'}`}
+      className={`bg-green-50 rounded p-2 hover:shadow-sm transition-shadow group h-full flex cursor-move relative border-2 border-green-400 border-l-4 border-l-green-500 ${isShortTask ? 'items-center' : 'items-start'}`}
       draggable
       onDragStart={(e) => {
         e.stopPropagation();
@@ -58,27 +64,29 @@ function ScheduledTaskBlock({ scheduledTask, onRemove, onDragStart, onResizeStar
         }}
       />
 
-      <div className={`flex justify-between gap-2 w-full ${isShortTask ? 'items-center' : 'items-start'}`}>
-        <div className={`flex-1 min-w-0 flex ${isShortTask ? 'items-center' : 'items-start'}`}>
+      <div className={`flex justify-between gap-2 w-full ${isShortTask ? 'items-start' : 'items-start'}`}>
+        <div className={`flex-1 min-w-0 flex ${isShortTask ? 'items-start' : 'items-start'}`}>
           {isShortTask ? (
-            // Short tasks: only show title, smaller text for very short tasks
-            <h4 className={`font-medium text-neutral-800 truncate ${getDurationMinutes() <= 20 ? 'text-xs' : 'text-sm'}`}>
+            // Short tasks: if overlapping, use truncate; otherwise wrap
+            <h4 className={`font-medium text-neutral-800 ${isOverlapping ? 'truncate' : 'break-words'} ${getDurationMinutes() <= 20 ? 'text-xs' : 'text-sm'}`}>
               {scheduledTask.taskTitle}
             </h4>
           ) : (
-            // Long tasks: show title first, then time (matching meetings)
+            // Long tasks: show title with wrapping, then time
             <div className="w-full">
-              <h4 className="text-sm font-medium text-neutral-800 truncate mb-1">
+              <h4 className="text-sm font-medium text-neutral-800 break-words mb-1">
                 {scheduledTask.taskTitle}
               </h4>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-green-700">
-                  {formatTime(scheduledTask.startTime)} - {formatTime(scheduledTask.endTime)}
-                </span>
-                <span className="text-xs text-green-600">
-                  ({calculateDuration()})
-                </span>
-              </div>
+              {!isOverlapping && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-medium text-green-700">
+                    {formatTime(scheduledTask.startTime)} - {formatTime(scheduledTask.endTime)}
+                  </span>
+                  <span className="text-xs text-green-600">
+                    ({calculateDuration()})
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
